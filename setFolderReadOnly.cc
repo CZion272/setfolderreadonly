@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <node.h>
 #include <Windows.h>
-
 	
 using v8::Exception;
 using v8::FunctionCallbackInfo;

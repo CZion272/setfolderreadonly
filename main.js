@@ -6,5 +6,5 @@ var binding = require(binding_path);
 var addon = require('./lib/setFolderReadOnly')
 
 exports.setFolderReadOnly = function(location) {
-  return addon.setFolderreadOnly(location);
+  return addon.setFolderReadOnly(location);
 }
