@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <node.h>
 #include <Windows.h>
-#include <map>
+#include <list>
 	
 using v8::Exception;
 using v8::FunctionCallbackInfo;
@@ -16,10 +16,11 @@ namespace addons
 {
 	struct FileHandle
 	{
-		FILE *pFformat;
-		FILE *pFmetadate;
-		FILE *pFImage;
-		
+		FILE *pFformat = NULL;
+		FILE *pFmetadate = NULL;
+		FILE *pFImage = NULL;		
+		const char* chPath;
+
 		bool open(const char *chFilePath)
 		{
 			pFformat = NULL;
@@ -39,6 +40,7 @@ namespace addons
 			if(!pFmetadate)
 			{
 				fclose(pFformat);
+				pFformat = NULL;
 				return false;
 			}
 
@@ -48,20 +50,33 @@ namespace addons
 			if(!pFImage)
 			{
 				fclose(pFformat);
+				pFformat = NULL;
 				fclose(pFmetadate);
+				pFmetadate = NULL;
 				return false;
 			}
+			chPath = chFilePath;
 		}
 		
 		void close()
 		{
-			fclose(pFformat);
+			if(pFformat)
+			{
+				fclose(pFformat);
+			}
+			if(pFmetadate)
+			{
+				fclose(pFmetadate);
+			}
 			fclose(pFmetadate);
-			fclose(pFImage);
+			if(pFImage)
+			{
+				fclose(pFImage);
+			}
 		}
 	};
 
-	map<const char*, FileHandle*> g_mapFiles;
+	list<FileHandle> g_listFiles;
 
 	void openFile(const FunctionCallbackInfo<Value>& args)
 	{
@@ -77,28 +92,25 @@ namespace addons
 		v8::String::Utf8Value str(args[0]->ToString());
 
 		const char *chFilePath = *str;
-		map<const char*, FileHandle*>::iterator iter;
-		for (iter = g_mapFiles.begin(); iter != g_mapFiles.end(); iter++)
+		list<FileHandle>::iterator iter;
+		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(chFilePath, iter->first))
+			if (strcmp(iter->chPath, chFilePath) == 0)
 			{
 				args.GetReturnValue().Set(FALSE);
 				return;
 			}
 		}
-		FILE *f = NULL;
-		FILE *f1 = NULL;
-		FILE *f2 = NULL;
 		
-		FileHandle *files = new FileHandle;
-		ZeroMemory(files, sizeof(FileHandle));
+		FileHandle files;
+		ZeroMemory(&files, sizeof(FileHandle));
 		
-		if (!files->open(chFilePath))
+		if (!files.open(chFilePath))
 		{
 			args.GetReturnValue().Set(FALSE);
 			return;
 		}
-		g_mapFiles.insert(pair<const char*, FileHandle*>(chFilePath, files));
+		g_listFiles.push_back(files);
 		args.GetReturnValue().Set(TRUE);
 	}
 
@@ -114,12 +126,14 @@ namespace addons
 		}
 		v8::String::Utf8Value str(args[0]->ToString());
 		const char *chpath = *str;
-		map<const char*, FileHandle*>::iterator iter;
-		for (iter = g_mapFiles.begin(); iter != g_mapFiles.end(); iter++)
+
+		list<FileHandle>::iterator iter;
+		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(chpath, iter->first))
+			if (strcmp(iter->chPath, chpath) == 0)
 			{
-				iter->second->close();
+				iter->close();
+				g_listFiles.erase(iter);
 				args.GetReturnValue().Set(TRUE);
 				return;
 			}
