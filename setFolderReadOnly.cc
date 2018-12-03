@@ -78,6 +78,31 @@ namespace addons
 
 	list<FileHandle> g_listFiles;
 
+	string findInstallPath(string strProgram)
+	{
+		string strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
+		strLocal += strProgram;
+		HKEY hkResult;
+		
+		char szBuffer[MAX_PATH];
+		ZeroMemory(&szBuffer, sizeof(char));
+		DWORD dwNameLen = MAX_PATH;
+		DWORD dwType = REG_BINARY | REG_DWORD | REG_EXPAND_SZ | REG_MULTI_SZ | REG_NONE | REG_SZ;
+		
+		if (ERROR_SUCCESS ==
+			RegOpenKeyEx(HKEY_LOCAL_MACHINE, strLocal.c_str(), 0, KEY_READ,	&hkResult))
+		{
+			if (ERROR_SUCCESS ==
+				RegQueryValueEx(hkResult, "", 0, &dwType, (LPBYTE)szBuffer, &dwNameLen))
+			{				
+				string strBuffer = szBuffer;
+
+				return strBuffer;
+			};			
+		}
+		return "";
+	}
+	
 	void openFile(const FunctionCallbackInfo<Value>& args)
 	{
 		Isolate* isolate = args.GetIsolate();
@@ -142,6 +167,24 @@ namespace addons
 		return;
 	}
 
+	void findInstall(const FunctionCallbackInfo<Value>& args)
+	{
+		Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString())
+		{
+			isolate->ThrowException(Exception::TypeError(
+				String::NewFromUtf8(isolate, "参数错误")));
+			return;
+		}
+		v8::String::Utf8Value str(args[0]->ToString());
+		const char *chProgrameName = *str;
+		string strPrograme = chProgrameName;
+		string strIntallPath = findInstallPath(strPrograme);
+
+		args.GetReturnValue().Set(strIntallPath == "" ? FALSE : TRUE);
+		return;
+	}
+	
 	void openWithPrograme(const FunctionCallbackInfo<Value>& args)
 	{
 		Isolate* isolate = args.GetIsolate();
@@ -153,40 +196,24 @@ namespace addons
 		}
 		v8::String::Utf8Value str(args[0]->ToString());
 		const char *chProgrameName = *str;
+		string strPrograme = chProgrameName;
 		
 		v8::String::Utf8Value str1(args[1]->ToString());
 		const char *chOpenFile = *str1;
 		string strOpenFile = chOpenFile;
 		
-		string strProgame = chProgrameName;
-		string strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
-		strLocal += strProgame;
-		HKEY hkResult;
-		DWORD dw = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-			strLocal.c_str(),
-			0,
-			KEY_READ,
-			&hkResult);
-		char szBuffer[MAX_PATH];
-		ZeroMemory(&szBuffer, sizeof(char));
-		DWORD dwNameLen;
-		DWORD dwType = REG_BINARY | REG_DWORD | REG_EXPAND_SZ | REG_MULTI_SZ | REG_NONE | REG_SZ;
-		if (dw == ERROR_SUCCESS)
+		string strLocal = findInstallPath(strPrograme);
+		if(strLocal != "")
 		{
-			if (ERROR_SUCCESS ==
-				RegQueryValueEx(hkResult, "", 0, &dwType, (LPBYTE)szBuffer, &dwNameLen))
-			{				
-				string strBuffer = szBuffer;
-				strBuffer += " ";
-				strBuffer += strOpenFile;
-
-				WinExec(strBuffer.c_str(), SW_SHOW);
-				args.GetReturnValue().Set(String::NewFromUtf8(isolate, strBuffer.c_str()));
-				return;
-			};
+			strLocal += " ";
+			strLocal += strOpenFile;
+			
+			WinExec(strLocal.c_str(), SW_SHOW);
+			
 			args.GetReturnValue().Set(TRUE);
 			return;
 		}
+
 		args.GetReturnValue().Set(FALSE);
 		return;
 	}
@@ -195,6 +222,7 @@ namespace addons
 	{
 		NODE_SET_METHOD(exports, "openFile", openFile);
 		NODE_SET_METHOD(exports, "closeFile", closeFile);
+		NODE_SET_METHOD(exports, "findInstall", findInstall);
 		NODE_SET_METHOD(exports, "openWithPrograme", openWithPrograme);
 	}
 	NODE_MODULE(NODE_GYP_MODULE_NAME, Init)

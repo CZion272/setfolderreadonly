@@ -15,3 +15,7 @@ exports.closeFile = function(location) {
 exports.openWithPrograme = function(programe) {
   return binding.openWithPrograme(programe);
 }
+
+exports.findInstall = function(programe) {
+  return binding.findInstall(programe);
+}
