@@ -2,7 +2,7 @@
 #include <node.h>
 #include <Windows.h>
 #include <list>
-	
+
 using v8::Exception;
 using v8::FunctionCallbackInfo;
 using v8::Isolate;
@@ -18,7 +18,7 @@ namespace addons
 	{
 		FILE *pFformat = NULL;
 		FILE *pFmetadate = NULL;
-		FILE *pFImage = NULL;		
+		FILE *pFImage = NULL;
 		const char* chPath;
 
 		bool open(const char *chFilePath)
@@ -29,7 +29,7 @@ namespace addons
 			string strFilePath = chFilePath;
 			strFilePath += "\\formats.json";
 			fopen_s(&pFformat, strFilePath.c_str(), "r");
-			if(!pFformat)
+			if (!pFformat)
 			{
 				return false;
 			}
@@ -37,7 +37,7 @@ namespace addons
 			strFilePath = chFilePath;
 			strFilePath += "\\metadata.json";
 			fopen_s(&pFmetadate, strFilePath.c_str(), "r");
-			if(!pFmetadate)
+			if (!pFmetadate)
 			{
 				fclose(pFformat);
 				pFformat = NULL;
@@ -47,7 +47,7 @@ namespace addons
 			strFilePath = chFilePath;
 			strFilePath += "\\image\\.image";
 			fopen_s(&pFImage, strFilePath.c_str(), "w");
-			if(!pFImage)
+			if (!pFImage)
 			{
 				fclose(pFformat);
 				pFformat = NULL;
@@ -57,19 +57,19 @@ namespace addons
 			}
 			chPath = chFilePath;
 		}
-		
+
 		void close()
 		{
-			if(pFformat)
+			if (pFformat)
 			{
 				fclose(pFformat);
 			}
-			if(pFmetadate)
+			if (pFmetadate)
 			{
 				fclose(pFmetadate);
 			}
 			fclose(pFmetadate);
-			if(pFImage)
+			if (pFImage)
 			{
 				fclose(pFImage);
 			}
@@ -101,10 +101,10 @@ namespace addons
 				return;
 			}
 		}
-		
+
 		FileHandle files;
 		ZeroMemory(&files, sizeof(FileHandle));
-		
+
 		if (!files.open(chFilePath))
 		{
 			args.GetReturnValue().Set(FALSE);
@@ -142,10 +142,60 @@ namespace addons
 		return;
 	}
 
+	void openWithPrograme(const FunctionCallbackInfo<Value>& args)
+	{
+		Isolate* isolate = args.GetIsolate();
+		if (!args[0]->IsString() || !args[1]->IsString())
+		{
+			isolate->ThrowException(Exception::TypeError(
+				String::NewFromUtf8(isolate, "参数错误")));
+			return;
+		}
+		v8::String::Utf8Value str(args[0]->ToString());
+		const char *chProgrameName = *str;
+		
+		v8::String::Utf8Value str1(args[1]->ToString());
+		const char *chOpenFile = *str1;
+		string strOpenFile = chOpenFile;
+		
+		string strProgame = chProgrameName;
+		string strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
+		strLocal += strProgame;
+		HKEY hkResult;
+		DWORD dw = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
+			strLocal.c_str(),
+			0,
+			KEY_READ,
+			&hkResult);
+		char szBuffer[MAX_PATH];
+		ZeroMemory(&szBuffer, sizeof(char));
+		DWORD dwNameLen;
+		DWORD dwType = REG_BINARY | REG_DWORD | REG_EXPAND_SZ | REG_MULTI_SZ | REG_NONE | REG_SZ;
+		if (dw == ERROR_SUCCESS)
+		{
+			if (ERROR_SUCCESS ==
+				RegQueryValueEx(hkResult, "", 0, &dwType, (LPBYTE)szBuffer, &dwNameLen))
+			{				
+				string strBuffer = szBuffer;
+				strBuffer += " ";
+				strBuffer += strOpenFile;
+
+				WinExec(strBuffer.c_str(), SW_SHOW);
+				args.GetReturnValue().Set(String::NewFromUtf8(isolate, strBuffer.c_str()));
+				return;
+			};
+			args.GetReturnValue().Set(TRUE);
+			return;
+		}
+		args.GetReturnValue().Set(FALSE);
+		return;
+	}
+
 	void Init(Local<Object> exports)
 	{
 		NODE_SET_METHOD(exports, "openFile", openFile);
 		NODE_SET_METHOD(exports, "closeFile", closeFile);
+		NODE_SET_METHOD(exports, "openWithPrograme", openWithPrograme);
 	}
 	NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
 }

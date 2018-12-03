@@ -11,3 +11,7 @@ exports.openFile = function(location) {
 exports.closeFile = function(location) {
   return binding.closeFile(location);
 }
+
+exports.openWithPrograme = function(programe) {
+  return binding.openWithPrograme(programe);
+}
