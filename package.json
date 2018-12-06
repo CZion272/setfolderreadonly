@@ -4,7 +4,7 @@
   "main": "main.js",
   "dependencies": {
     "bindings": "~1.2.1",
-    "node-addon-api": "^1.6.2"
+    "nan": "^2.11.1"
   },
   "devDependencies": {
     "aws-sdk": "^2.361.0",
@@ -23,12 +23,8 @@
   "gypfile": true,
   "binary": {
     "module_name": "setfolderreadonly",
-    "module_path": "./lib/{node_napi_label}",
-    "package_name": "{platform}-{arch}-{node_napi_label}.tar.gz",
+    "module_path": "./lib",
     "host": "https://github.com/CZion272/setfolderreadonly/releases/download/",
-    "remote_path": "{version}",
-    "napi_versions": [
-      2
-    ]
+    "remote_path": "{version}"
   }
 }

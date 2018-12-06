@@ -19,7 +19,3 @@ exports.openWithPrograme = function(programe) {
 exports.findInstall = function(programe) {
   return binding.findInstall(programe);
 }
-
-exports.openZip = function(location) {
-  return binding.openZip(location);
-}
