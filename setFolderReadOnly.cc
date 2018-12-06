@@ -2,16 +2,24 @@
 #include <node.h>
 #include <Windows.h>
 #include <list>
+#include <QString>
+#include <QDebug>
 
+using v8::Context;
 using v8::Exception;
+using v8::Function;
 using v8::FunctionCallbackInfo;
+using v8::FunctionTemplate;
 using v8::Isolate;
 using v8::Local;
 using v8::Number;
 using v8::Object;
+using v8::Persistent;
 using v8::String;
 using v8::Value;
+
 using namespace std;
+
 namespace addons
 {
 	struct FileHandle
@@ -19,24 +27,24 @@ namespace addons
 		FILE *pFformat = NULL;
 		FILE *pFmetadate = NULL;
 		FILE *pFImage = NULL;
-		const char* chPath;
+		QString strPath;
 
-		bool open(const char *chFilePath)
+		bool open(QString strFilePath)
 		{
 			pFformat = NULL;
 			pFmetadate = NULL;
 			pFImage = NULL;
-			string strFilePath = chFilePath;
-			strFilePath += "\\formats.json";
-			fopen_s(&pFformat, strFilePath.c_str(), "r");
+			QString strOpenFilePath = strFilePath;
+			strOpenFilePath += "\\formats.json";
+			fopen_s(&pFformat, strFilePath.toLatin1().constData(), "r");
 			if (!pFformat)
 			{
 				return false;
 			}
 
-			strFilePath = chFilePath;
-			strFilePath += "\\metadata.json";
-			fopen_s(&pFmetadate, strFilePath.c_str(), "r");
+			strOpenFilePath = strFilePath;
+			strOpenFilePath += "\\metadata.json";
+			fopen_s(&pFmetadate, strFilePath.toLatin1().constData(), "r");
 			if (!pFmetadate)
 			{
 				fclose(pFformat);
@@ -44,9 +52,9 @@ namespace addons
 				return false;
 			}
 
-			strFilePath = chFilePath;
-			strFilePath += "\\image\\.image";
-			fopen_s(&pFImage, strFilePath.c_str(), "w");
+			strOpenFilePath = strFilePath;
+			strOpenFilePath += "\\image\\.image";
+			fopen_s(&pFImage, strFilePath.toLatin1().constData(), "w");
 			if (!pFImage)
 			{
 				fclose(pFformat);
@@ -55,7 +63,7 @@ namespace addons
 				pFmetadate = NULL;
 				return false;
 			}
-			chPath = chFilePath;
+			strPath = strFilePath;
 		}
 
 		void close()
@@ -77,10 +85,10 @@ namespace addons
 	};
 
 	list<FileHandle> g_listFiles;
-
-	string findInstallPath(string strProgram)
+	   
+	QString findInstallPath(QString strProgram)
 	{
-		string strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
+		QString strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
 		strLocal += strProgram;
 		HKEY hkResult;
 		
@@ -90,12 +98,12 @@ namespace addons
 		DWORD dwType = REG_BINARY | REG_DWORD | REG_EXPAND_SZ | REG_MULTI_SZ | REG_NONE | REG_SZ;
 		
 		if (ERROR_SUCCESS ==
-			RegOpenKeyEx(HKEY_LOCAL_MACHINE, strLocal.c_str(), 0, KEY_READ,	&hkResult))
+			RegOpenKeyEx(HKEY_LOCAL_MACHINE, strLocal.toLatin1().constData(), 0, KEY_READ,	&hkResult))
 		{
 			if (ERROR_SUCCESS ==
 				RegQueryValueEx(hkResult, "", 0, &dwType, (LPBYTE)szBuffer, &dwNameLen))
 			{				
-				string strBuffer = szBuffer;
+				QString strBuffer = szBuffer;
 
 				return strBuffer;
 			};			
@@ -116,11 +124,11 @@ namespace addons
 		}
 		v8::String::Utf8Value str(args[0]->ToString());
 
-		const char *chFilePath = *str;
+		QString strFilePath = *str;
 		list<FileHandle>::iterator iter;
 		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(iter->chPath, chFilePath) == 0)
+			if (iter->strPath == strFilePath)
 			{
 				args.GetReturnValue().Set(FALSE);
 				return;
@@ -130,7 +138,7 @@ namespace addons
 		FileHandle files;
 		ZeroMemory(&files, sizeof(FileHandle));
 
-		if (!files.open(chFilePath))
+		if (!files.open(strFilePath.toLatin1().constData()))
 		{
 			args.GetReturnValue().Set(FALSE);
 			return;
@@ -150,12 +158,13 @@ namespace addons
 			return;
 		}
 		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chpath = *str;
+		
+		QString strFilePath = *str;
 
 		list<FileHandle>::iterator iter;
 		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(iter->chPath, chpath) == 0)
+			if (iter->strPath == strFilePath)
 			{
 				iter->close();
 				g_listFiles.erase(iter);
@@ -177,9 +186,9 @@ namespace addons
 			return;
 		}
 		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chProgrameName = *str;
-		string strPrograme = chProgrameName;
-		string strIntallPath = findInstallPath(strPrograme);
+		QString strProgrameName = *str;
+
+		QString strIntallPath = findInstallPath(strProgrameName);
 
 		args.GetReturnValue().Set(strIntallPath == "" ? FALSE : TRUE);
 		return;
@@ -194,21 +203,20 @@ namespace addons
 				String::NewFromUtf8(isolate, "参数错误")));
 			return;
 		}
+
 		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chProgrameName = *str;
-		string strPrograme = chProgrameName;
+		QString strPrograme = *str;
 		
 		v8::String::Utf8Value str1(args[1]->ToString());
-		const char *chOpenFile = *str1;
-		string strOpenFile = chOpenFile;
-		
-		string strLocal = findInstallPath(strPrograme);
+		QString strOpenFile = *str1;
+		qDebug() << strPrograme;
+		QString strLocal = findInstallPath(strPrograme);
 		if(strLocal != "")
 		{
 			strLocal += " ";
-			strLocal += strOpenFile;
+			strLocal += strOpenFile.toLatin1().constData();
 			
-			WinExec(strLocal.c_str(), SW_SHOW);
+			WinExec(strLocal.toLatin1().constData(), SW_SHOW);
 			
 			args.GetReturnValue().Set(TRUE);
 			return;
