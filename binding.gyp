@@ -18,8 +18,8 @@
 	  ],
 	  "link_settings": {
 		 "libraries": [
-		 "$(QTDIR)/lib/Qt5Guid.lib",
-		 "$(QTDIR)/lib/Qt5Cored.lib"
+		 "$(QTDIR)/lib/Qt5Gui.lib",
+		 "$(QTDIR)/lib/Qt5Core.lib"
 		 ],
 		 }
     },
