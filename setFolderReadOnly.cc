@@ -1,17 +1,11 @@
 #include <stdio.h>
-#include <node.h>
+#define NAPI_VERSION 2
+#include <napi.h>
 #include <Windows.h>
 #include <list>
 
-using v8::Exception;
-using v8::FunctionCallbackInfo;
-using v8::Isolate;
-using v8::Local;
-using v8::Number;
-using v8::Object;
-using v8::String;
-using v8::Value;
 using namespace std;
+
 namespace addons
 {
 	struct FileHandle
@@ -19,7 +13,7 @@ namespace addons
 		FILE *pFformat = NULL;
 		FILE *pFmetadate = NULL;
 		FILE *pFImage = NULL;
-		const char* chPath;
+		string chPath;
 
 		bool open(const char *chFilePath)
 		{
@@ -56,6 +50,7 @@ namespace addons
 				return false;
 			}
 			chPath = chFilePath;
+			return true;
 		}
 
 		void close()
@@ -83,147 +78,134 @@ namespace addons
 		string strLocal = "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\";
 		strLocal += strProgram;
 		HKEY hkResult;
-		
+
 		char szBuffer[MAX_PATH];
 		ZeroMemory(&szBuffer, sizeof(char));
 		DWORD dwNameLen = MAX_PATH;
 		DWORD dwType = REG_BINARY | REG_DWORD | REG_EXPAND_SZ | REG_MULTI_SZ | REG_NONE | REG_SZ;
-		
+
 		if (ERROR_SUCCESS ==
-			RegOpenKeyEx(HKEY_LOCAL_MACHINE, strLocal.c_str(), 0, KEY_READ,	&hkResult))
+			RegOpenKeyEx(HKEY_LOCAL_MACHINE, strLocal.c_str(), 0, KEY_READ, &hkResult))
 		{
 			if (ERROR_SUCCESS ==
 				RegQueryValueEx(hkResult, "", 0, &dwType, (LPBYTE)szBuffer, &dwNameLen))
-			{				
+			{
 				string strBuffer = szBuffer;
 
 				return strBuffer;
-			};			
+			};
 		}
 		return "";
 	}
-	
-	void openFile(const FunctionCallbackInfo<Value>& args)
+
+	Napi::Boolean openFile(const Napi::CallbackInfo& info)
 	{
-		Isolate* isolate = args.GetIsolate();
+		Napi::Env env = info.Env();
 
-		if (!args[0]->IsString())
+		if (!info[0].IsString())
 		{
-			isolate->ThrowException(Exception::TypeError(
-				String::NewFromUtf8(isolate, "参数错误")));
-			args.GetReturnValue().Set(FALSE);
-			return;
+			Napi::TypeError::New(env, "Wrong arguments").ThrowAsJavaScriptException();
+			return Napi::Boolean::New(env, FALSE);
 		}
-		v8::String::Utf8Value str(args[0]->ToString());
 
-		const char *chFilePath = *str;
+		string strFilePath = info[0].ToString();
 		list<FileHandle>::iterator iter;
 		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(iter->chPath, chFilePath) == 0)
+			if (iter->chPath == strFilePath)
 			{
-				args.GetReturnValue().Set(FALSE);
-				return;
+				return Napi::Boolean::New(env, FALSE);
 			}
 		}
 
 		FileHandle files;
 		ZeroMemory(&files, sizeof(FileHandle));
 
-		if (!files.open(chFilePath))
+		if (!files.open(strFilePath.c_str()))
 		{
-			args.GetReturnValue().Set(FALSE);
-			return;
+			return Napi::Boolean::New(env, FALSE);
 		}
 		g_listFiles.push_back(files);
-		args.GetReturnValue().Set(TRUE);
+		return Napi::Boolean::New(env, TRUE);
 	}
 
-	void closeFile(const FunctionCallbackInfo<Value>& args)
+	Napi::Boolean closeFile(const Napi::CallbackInfo& info)
 	{
-		Isolate* isolate = args.GetIsolate();
+		Napi::Env env = info.Env();
 
-		if (!args[0]->IsString())
+		if (!info[0].IsString())
 		{
-			isolate->ThrowException(Exception::TypeError(
-				String::NewFromUtf8(isolate, "参数错误")));
-			return;
+			Napi::TypeError::New(env, "Wrong arguments").ThrowAsJavaScriptException();
+			return Napi::Boolean::New(env, FALSE);
 		}
-		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chpath = *str;
+		string strPath = info[0].ToString();
 
 		list<FileHandle>::iterator iter;
 		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
 		{
-			if (strcmp(iter->chPath, chpath) == 0)
+			if (iter->chPath == strPath)
 			{
 				iter->close();
 				g_listFiles.erase(iter);
-				args.GetReturnValue().Set(TRUE);
-				return;
+				return Napi::Boolean::New(env, TRUE);
 			}
 		}
-		args.GetReturnValue().Set(FALSE);
-		return;
+		return Napi::Boolean::New(env, FALSE);
 	}
 
-	void findInstall(const FunctionCallbackInfo<Value>& args)
+	Napi::Boolean findInstall(const Napi::CallbackInfo& info)
 	{
-		Isolate* isolate = args.GetIsolate();
-		if (!args[0]->IsString())
+		Napi::Env env = info.Env();
+		if (!info[0].IsString())
 		{
-			isolate->ThrowException(Exception::TypeError(
-				String::NewFromUtf8(isolate, "参数错误")));
-			return;
+			Napi::TypeError::New(env, "Wrong number of arguments").ThrowAsJavaScriptException();
+			return Napi::Boolean::New(env, FALSE);
 		}
-		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chProgrameName = *str;
-		string strPrograme = chProgrameName;
+		string strPrograme = info[0].ToString();
 		string strIntallPath = findInstallPath(strPrograme);
 
-		args.GetReturnValue().Set(strIntallPath == "" ? FALSE : TRUE);
-		return;
+		return Napi::Boolean::New(env,(strIntallPath == "" ? FALSE : TRUE));
 	}
-	
-	void openWithPrograme(const FunctionCallbackInfo<Value>& args)
+
+	Napi::Boolean openWithPrograme(const Napi::CallbackInfo& info)
 	{
-		Isolate* isolate = args.GetIsolate();
-		if (!args[0]->IsString() || !args[1]->IsString())
+		Napi::Env env = info.Env();
+		if (info.Length() < 2 || !info[0].IsString() || !info[1].IsString())
 		{
-			isolate->ThrowException(Exception::TypeError(
-				String::NewFromUtf8(isolate, "参数错误")));
-			return;
+			Napi::TypeError::New(env, "Wrong arguments").ThrowAsJavaScriptException();
+			return Napi::Boolean::New(env, FALSE);
 		}
-		v8::String::Utf8Value str(args[0]->ToString());
-		const char *chProgrameName = *str;
-		string strPrograme = chProgrameName;
-		
-		v8::String::Utf8Value str1(args[1]->ToString());
-		const char *chOpenFile = *str1;
-		string strOpenFile = chOpenFile;
-		
+
+		string strPrograme = info[0].ToString();
+
+		string strOpenFile = info[1].ToString();
+
 		string strLocal = findInstallPath(strPrograme);
-		if(strLocal != "")
+		if (strLocal != "")
 		{
 			strLocal += " ";
 			strLocal += strOpenFile;
-			
+
 			WinExec(strLocal.c_str(), SW_SHOW);
-			
-			args.GetReturnValue().Set(TRUE);
-			return;
+
+			return Napi::Boolean::New(env, TRUE);
 		}
 
-		args.GetReturnValue().Set(FALSE);
-		return;
+		return Napi::Boolean::New(env, FALSE);
 	}
 
-	void Init(Local<Object> exports)
+	Napi::Object Init(Napi::Env env, Napi::Object exports)
 	{
-		NODE_SET_METHOD(exports, "openFile", openFile);
-		NODE_SET_METHOD(exports, "closeFile", closeFile);
-		NODE_SET_METHOD(exports, "findInstall", findInstall);
-		NODE_SET_METHOD(exports, "openWithPrograme", openWithPrograme);
+		exports.Set(Napi::String::New(env, "openFile"),
+              Napi::Function::New(env, openFile));
+		exports.Set(Napi::String::New(env, "closeFile"),
+              Napi::Function::New(env, closeFile));
+		exports.Set(Napi::String::New(env, "findInstall"),
+              Napi::Function::New(env, findInstall));
+		exports.Set(Napi::String::New(env, "openWithPrograme"),
+              Napi::Function::New(env, openWithPrograme));
+		return exports;
 	}
-	NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
+	
+	NODE_API_MODULE(NODE_GYP_MODULE_NAME, Init)
 }
