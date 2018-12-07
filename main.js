@@ -12,8 +12,8 @@ exports.closeFile = function(location) {
   return binding.closeFile(location);
 }
 
-exports.openWithPrograme = function(programe) {
-  return binding.openWithPrograme(programe);
+exports.openWithPrograme = function(programe, file) {
+  return binding.openWithPrograme(programe, file);
 }
 
 exports.findInstall = function(programe) {
