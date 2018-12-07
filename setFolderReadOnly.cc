@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <list>
 #include <QString>
+#include <QList>
 #include <QDebug>
 
 using v8::Context;
@@ -34,27 +35,25 @@ namespace addons
 			pFformat = NULL;
 			pFmetadate = NULL;
 			pFImage = NULL;
-			QString strOpenFilePath = strFilePath;
+			QString strOpenFilePath = strFilePath.replace("/", "\\");
 			strOpenFilePath += "\\formats.json";
-			fopen_s(&pFformat, strFilePath.toLatin1().constData(), "r");
+			fopen_s(&pFformat, strOpenFilePath.toLatin1().constData(), "r");
 			if (!pFformat)
 			{
 				return false;
 			}
-
-			strOpenFilePath = strFilePath;
+			strOpenFilePath = strFilePath.replace("/", "\\");
 			strOpenFilePath += "\\metadata.json";
-			fopen_s(&pFmetadate, strFilePath.toLatin1().constData(), "r");
+			fopen_s(&pFmetadate, strOpenFilePath.toLatin1().constData(), "r");
 			if (!pFmetadate)
 			{
 				fclose(pFformat);
 				pFformat = NULL;
 				return false;
 			}
-
-			strOpenFilePath = strFilePath;
+			strOpenFilePath = strFilePath.replace("/", "\\");
 			strOpenFilePath += "\\image\\.image";
-			fopen_s(&pFImage, strFilePath.toLatin1().constData(), "w");
+			fopen_s(&pFImage, strOpenFilePath.toLatin1().constData(), "w");
 			if (!pFImage)
 			{
 				fclose(pFformat);
@@ -64,6 +63,7 @@ namespace addons
 				return false;
 			}
 			strPath = strFilePath;
+			return true;
 		}
 
 		void close()
@@ -71,20 +71,23 @@ namespace addons
 			if (pFformat)
 			{
 				fclose(pFformat);
+				pFformat = NULL;
 			}
 			if (pFmetadate)
 			{
 				fclose(pFmetadate);
+				pFformat = NULL;
 			}
 			fclose(pFmetadate);
 			if (pFImage)
 			{
 				fclose(pFImage);
+				pFformat = NULL;
 			}
 		}
 	};
 
-	list<FileHandle> g_listFiles;
+	QList<FileHandle> g_listFiles;
 	   
 	QString findInstallPath(QString strProgram)
 	{
@@ -125,25 +128,22 @@ namespace addons
 		v8::String::Utf8Value str(args[0]->ToString());
 
 		QString strFilePath = *str;
-		list<FileHandle>::iterator iter;
-		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
+		for (int i = 0; i < g_listFiles.count(); i++)
 		{
-			if (iter->strPath == strFilePath)
+			if (g_listFiles.at(i).strPath == strFilePath)
 			{
 				args.GetReturnValue().Set(FALSE);
 				return;
 			}
 		}
-
 		FileHandle files;
-		ZeroMemory(&files, sizeof(FileHandle));
 
 		if (!files.open(strFilePath.toLatin1().constData()))
 		{
 			args.GetReturnValue().Set(FALSE);
 			return;
 		}
-		g_listFiles.push_back(files);
+		g_listFiles.append(files);
 		args.GetReturnValue().Set(TRUE);
 	}
 
@@ -161,13 +161,13 @@ namespace addons
 		
 		QString strFilePath = *str;
 
-		list<FileHandle>::iterator iter;
-		for (iter = g_listFiles.begin(); iter != g_listFiles.end(); iter++)
+		for (int i = 0; i < g_listFiles.count(); i++)
 		{
-			if (iter->strPath == strFilePath)
+			if (g_listFiles.at(i).strPath == strFilePath)
 			{
-				iter->close();
-				g_listFiles.erase(iter);
+				FileHandle file = g_listFiles.at(i);
+				file.close();
+				g_listFiles.removeAt(i);
 				args.GetReturnValue().Set(TRUE);
 				return;
 			}
@@ -209,7 +209,7 @@ namespace addons
 		
 		v8::String::Utf8Value str1(args[1]->ToString());
 		QString strOpenFile = *str1;
-		qDebug() << strPrograme;
+
 		QString strLocal = findInstallPath(strPrograme);
 		if(strLocal != "")
 		{
