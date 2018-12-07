@@ -25,41 +25,17 @@ namespace addons
 {
 	struct FileHandle
 	{
-		FILE *pFformat = NULL;
-		FILE *pFmetadate = NULL;
 		FILE *pFImage = NULL;
 		QString strPath;
 
 		bool open(QString strFilePath)
 		{
-			pFformat = NULL;
-			pFmetadate = NULL;
 			pFImage = NULL;
 			QString strOpenFilePath = strFilePath.replace("/", "\\");
-			strOpenFilePath += "\\formats.json";
-			fopen_s(&pFformat, strOpenFilePath.toLatin1().constData(), "r");
-			if (!pFformat)
-			{
-				return false;
-			}
-			strOpenFilePath = strFilePath.replace("/", "\\");
-			strOpenFilePath += "\\metadata.json";
-			fopen_s(&pFmetadate, strOpenFilePath.toLatin1().constData(), "r");
-			if (!pFmetadate)
-			{
-				fclose(pFformat);
-				pFformat = NULL;
-				return false;
-			}
-			strOpenFilePath = strFilePath.replace("/", "\\");
 			strOpenFilePath += "\\image\\.image";
 			fopen_s(&pFImage, strOpenFilePath.toLatin1().constData(), "w");
 			if (!pFImage)
 			{
-				fclose(pFformat);
-				pFformat = NULL;
-				fclose(pFmetadate);
-				pFmetadate = NULL;
 				return false;
 			}
 			strPath = strFilePath;
@@ -68,21 +44,10 @@ namespace addons
 
 		void close()
 		{
-			if (pFformat)
-			{
-				fclose(pFformat);
-				pFformat = NULL;
-			}
-			if (pFmetadate)
-			{
-				fclose(pFmetadate);
-				pFformat = NULL;
-			}
-			fclose(pFmetadate);
 			if (pFImage)
 			{
 				fclose(pFImage);
-				pFformat = NULL;
+				pFImage = NULL;
 			}
 		}
 	};
