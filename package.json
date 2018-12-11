@@ -1,6 +1,6 @@
 {
   "name": "setfolderreadonly",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "main": "main.js",
   "dependencies": {
     "bindings": "~1.2.1",
