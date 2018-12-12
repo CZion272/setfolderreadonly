@@ -211,9 +211,7 @@ namespace addons
 
 		v8::String::Utf8Value str(args[0]->ToString());
 		QString strOpenFile = *str;
-
-		int nMode = args[1]->IsNumber();
-
+		int nMode = args[1]->IntegerValue();
 		wchar_t wcFile[MAX_PATH] = { 0 };
 		strOpenFile.toWCharArray(wcFile);
 
