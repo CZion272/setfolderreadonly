@@ -7,7 +7,6 @@ exports.openFile = function(location) {
   return binding.openFile(location);
 }
 
-
 exports.closeFile = function(location) {
   return binding.closeFile(location);
 }
@@ -18,4 +17,8 @@ exports.openWithPrograme = function(file, mod) {
 
 exports.findInstall = function(programe) {
   return binding.findInstall(programe);
+}
+
+exports.DiskMessage = function(path, func) {
+  return binding.DiskMessage(path, func);
 }
