@@ -1,1 +1,9 @@
 *.bat
+*.cc
+test.js
+*.yml
+bin
+build
+node_modules
+*.dll
+*.lib
