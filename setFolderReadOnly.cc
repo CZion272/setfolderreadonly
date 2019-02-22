@@ -247,6 +247,39 @@ namespace addons
         return;
     }
 
+    QString getBytesString(DWORD64 dw)
+    {
+        long rest = 0;
+        if (dw < 1024)
+        {
+            return QString::number(rest) + "B";
+        }
+        else
+        {
+            dw /= 1024;
+        }
+
+        if (dw < 1024)
+        {
+            return QString::number(rest) + "KB";
+        }
+        else
+        {
+            rest = dw % 1024;
+            dw /= 1024;
+        }
+
+        if (dw < 1024) 
+        {
+            dw = dw * 100;
+            return QString::number((dw / 100)) + "." + QString::number((rest * 100 / 1024 % 100)) + "MB";
+        }
+        else
+        {
+            dw = dw * 100 / 1024;
+            return QString::number((dw / 100)) + "." + QString::number((dw % 100)) + "GB";
+        }
+    }
 
     void DiskMessage(const FunctionCallbackInfo<Value>& args)
     {
@@ -262,30 +295,28 @@ namespace addons
 
         QString strDisk(*(v8::String::Utf8Value)args[0]->ToString());
         strDisk = strDisk.left(2);
-        qDebug() << strDisk;
         DWORD64 qwFreeBytes, qwFreeBytesToCaller, qwTotalBytes;
         HRESULT bResult = GetDiskFreeSpaceEx(strDisk.toLatin1().constData(),
             (PULARGE_INTEGER)&qwFreeBytesToCaller,
             (PULARGE_INTEGER)&qwTotalBytes,
             (PULARGE_INTEGER)&qwFreeBytes);
         Local<Value> value[4];
-        qDebug() << bResult;
+        QString strFreeToCaller , strTotal ,strFree;
         if (bResult)
         {
-            value[0] = Boolean::New(isolate, TRUE);
-            value[1] = Integer::NewFromUnsigned(isolate, qwFreeBytesToCaller);
-            value[2] = Integer::NewFromUnsigned(isolate, qwTotalBytes);
-            value[3] = Integer::NewFromUnsigned(isolate, qwFreeBytes);
+            strFreeToCaller = getBytesString(qwFreeBytesToCaller);
+            strTotal = getBytesString(qwTotalBytes);
+            strFree = getBytesString(qwFreeBytes);
         }
-        else
-        {
-            value[0] = Boolean::New(isolate, FALSE);
-            value[1] = Integer::NewFromUnsigned(isolate, 0);
-            value[2] = Integer::NewFromUnsigned(isolate, 0);
-            value[3] = Integer::NewFromUnsigned(isolate, 0);
-        }
+
+        value[0] = Boolean::New(isolate, bResult);
+        value[1] = String::NewFromUtf8(isolate, strFreeToCaller.toLatin1().constData());
+        value[2] = String::NewFromUtf8(isolate, strTotal.toLatin1().constData());
+        value[3] = String::NewFromUtf8(isolate, strFree.toLatin1().constData());
+
         cb->Call(isolate->GetCurrentContext()->Global(), 4, value);
     }
+
     void Init(Local<Object> exports)
     {
         NODE_SET_METHOD(exports, "openFile", openFile);
