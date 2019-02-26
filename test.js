@@ -11,7 +11,9 @@ function run(programe, arg) {
   console.log(addon.cpuId());
 }
 
-addon.DiskMessage("C:\\", function(error, freeSpace, totalSpace, freeCanUse)
+console.log(addon.openFile("D:\\test"));
+
+addon.DiskMessage("D:\\", function(error, freeSpace, totalSpace, freeCanUse)
   {
     console.log(error)
     console.log(freeSpace)
@@ -20,4 +22,3 @@ addon.DiskMessage("C:\\", function(error, freeSpace, totalSpace, freeCanUse)
   }
 
 )
-
