@@ -22,3 +22,4 @@ addon.DiskMessage("D:\\", function(error, freeSpace, totalSpace, freeCanUse)
   }
 
 )
+addon.copyFile("C:\\Users\\Administrator\\Desktop\\322-0.png*C:\\Users\\Administrator\\Desktop\\59a3e0ab68322.png");

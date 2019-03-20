@@ -17,6 +17,9 @@
 #include <bitset>
 #include <array>
 #include <intrin.h>
+#include <QClipboard>
+#include <QMimeData>
+#include <QGuiApplication>
 #pragma comment(lib, "oleaut32.lib")
 
 using v8::Context;
@@ -56,13 +59,15 @@ namespace addons
         hr = pPicture->SaveAsFile(pStream, TRUE, &cbSize);
 
         // Write the stream content to the file
-        if (!FAILED(hr)) {
+        if (!FAILED(hr))
+        {
             HGLOBAL hBuf = 0;
             GetHGlobalFromStream(pStream, &hBuf);
             void* buffer = GlobalLock(hBuf);
             HANDLE hFile = CreateFileW(path, GENERIC_WRITE, 0, 0, CREATE_ALWAYS, 0, 0);
             if (!hFile) hr = HRESULT_FROM_WIN32(GetLastError());
-            else {
+            else
+            {
                 DWORD written = 0;
                 WriteFile(hFile, buffer, cbSize, &written, 0);
                 CloseHandle(hFile);
@@ -269,7 +274,7 @@ namespace addons
             dw /= 1024;
         }
 
-        if (dw < 1024) 
+        if (dw < 1024)
         {
             dw = dw * 100;
             return QString::number((dw / 100)) + "." + QString::number((rest * 100 / 1024 % 100)) + "MB";
@@ -301,7 +306,7 @@ namespace addons
             (PULARGE_INTEGER)&qwTotalBytes,
             (PULARGE_INTEGER)&qwFreeBytes);
         Local<Value> value[4];
-        QString strFreeToCaller , strTotal ,strFree;
+        QString strFreeToCaller, strTotal, strFree;
         if (bResult)
         {
             strFreeToCaller = getBytesString(qwFreeBytesToCaller);
@@ -317,6 +322,39 @@ namespace addons
         cb->Call(isolate->GetCurrentContext()->Global(), 4, value);
     }
 
+    void copyFile(const FunctionCallbackInfo<Value>& args)
+    {
+        Isolate* isolate = args.GetIsolate();
+        if (!args[0]->IsString())
+        {
+            isolate->ThrowException(Exception::TypeError(
+                String::NewFromUtf8(isolate, "error")));
+            return;
+        }
+        v8::String::Utf8Value str(args[0]->ToString());
+        QString strFile = *str;
+        QStringList lstFile = strFile.split("*");
+
+        if (!QGuiApplication::instance())
+        {
+            int argc = 0;
+            QGuiApplication *app = new QGuiApplication(argc, 0);
+        }
+
+        QClipboard *clip = QGuiApplication::clipboard();
+        QMimeData *data = new QMimeData;
+        clip->clear();
+        QList<QUrl> lstUrl;
+        foreach(QString str, lstFile)
+        {
+            lstUrl << QUrl::fromLocalFile(str);
+        }
+        data->setUrls(lstUrl);
+        clip->setMimeData(data);
+        data->deleteLater();
+        return;
+    }
+
     void Init(Local<Object> exports)
     {
         NODE_SET_METHOD(exports, "openFile", openFile);
@@ -324,6 +362,7 @@ namespace addons
         NODE_SET_METHOD(exports, "findInstall", findInstall);
         NODE_SET_METHOD(exports, "openWithPrograme", openWithPrograme);
         NODE_SET_METHOD(exports, "DiskMessage", DiskMessage);
+        NODE_SET_METHOD(exports, "copyFile", copyFile);
     }
     NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
 }

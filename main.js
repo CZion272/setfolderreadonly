@@ -22,3 +22,8 @@ exports.findInstall = function(programe) {
 exports.DiskMessage = function(path, func) {
   return binding.DiskMessage(path, func);
 }
+
+//Use '*' to parting path
+exports.copyFile = function(path) {
+  return binding.copyFile(path);
+}
