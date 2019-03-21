@@ -20,6 +20,7 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QGuiApplication>
+#include <QThread>
 #pragma comment(lib, "oleaut32.lib")
 
 using v8::Context;
@@ -340,9 +341,8 @@ namespace addons
             int argc = 0;
             QGuiApplication *app = new QGuiApplication(argc, 0);
         }
-
-        QClipboard *clip = QGuiApplication::clipboard();
         QMimeData *data = new QMimeData;
+        QClipboard *clip = QGuiApplication::clipboard();
         clip->clear();
         QList<QUrl> lstUrl;
         foreach(QString str, lstFile)
@@ -351,8 +351,6 @@ namespace addons
         }
         data->setUrls(lstUrl);
         clip->setMimeData(data);
-        data->deleteLater();
-        return;
     }
 
     void Init(Local<Object> exports)

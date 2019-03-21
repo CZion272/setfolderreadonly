@@ -1,5 +1,6 @@
 *.bat
 *.cc
+lib
 test.js
 *.yml
 bin
