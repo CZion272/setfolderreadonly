@@ -5,7 +5,8 @@ var fs = require('fs')
 // console.log(addon.openFile("D:\\setfolderreadonly\\123"));
 // console.log(addon.openFile("D:\\setfolderreadonly\\123"));
 // console.log(addon.closeFile("D:\\setfolderreadonly\\123"));
-// // console.log(addon.openWithPrograme("靐龘.exe", "C:\\Users\\Administrator\\Desktop\\501119420.png"));
+
+console.log(addon.openWithPrograme("C:\\Users\\Administrator\\Desktop\\322-0.png", 1));
 function run(programe, arg) {
   console.log(addon.openWithPrograme(programe, arg));
   console.log(addon.cpuId());
@@ -22,4 +23,4 @@ addon.DiskMessage("D:\\", function(error, freeSpace, totalSpace, freeCanUse)
   }
 
 )
-addon.copyFile("C:\\Users\\Administrator\\Desktop\\322-0.png*C:\\Users\\Administrator\\Desktop\\59a3e0ab68322.png");
+// addon.copyFile("C:\\Users\\Administrator\\Desktop\\322-0.png*C:\\Users\\Administrator\\Desktop\\59a3e0ab68322.png");

@@ -245,8 +245,6 @@ namespace addons
             QString argm = "rundll32 shell32,OpenAs_RunDLL ";
             argm = argm + strOpenFile;
 
-            std::string strArgm = argm.toStdString();
-            const char* ch = strArgm.c_str();
             QProcess::execute(argm);
         }
         args.GetReturnValue().Set(TRUE);
