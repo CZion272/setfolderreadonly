@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <node.h>
+#include <node_api.h>
 
 #ifdef WIN32
 #include <Windows.h>
@@ -23,28 +23,37 @@
 #include <QThread>
 #pragma comment(lib, "oleaut32.lib")
 
-using v8::Context;
-using v8::Exception;
-using v8::Function;
-using v8::FunctionCallbackInfo;
-using v8::FunctionTemplate;
-using v8::Isolate;
-using v8::Local;
-using v8::Number;
-using v8::Integer;
-using v8::Boolean;
-using v8::Object;
-using v8::Persistent;
-using v8::String;
-using v8::Value;
-
 using namespace std;
+
+#define DECLARE_NAPI_METHOD(name, func)                          \
+  { name, 0, func, 0, 0, 0, napi_default, 0 }
 
 namespace addons
 {
+    static napi_value intValue(napi_env env, int num)
+    {
+        napi_value rb;
+        napi_create_int32(env, num, &rb);
+        return rb;
+    }
+
+    static napi_value stringValue(napi_env env, QString str)
+    {
+        napi_value rb;
+        napi_create_string_latin1(env, str.toLatin1(), str.length(), &rb);
+        return rb;
+    }
+
+    static napi_value boolenValue(napi_env env, bool b)
+    {
+        napi_value rb;
+        napi_get_boolean(env, b, &rb);
+        return rb;
+    }
 
     HRESULT SaveIcon(HICON hIcon, const wchar_t* path)
     {
+#ifdef WIN32
         // Create the IPicture intrface
         PICTDESC desc = { sizeof(PICTDESC) };
         desc.picType = PICTYPE_ICON;
@@ -79,7 +88,8 @@ namespace addons
         pStream->Release();
         pPicture->Release();
         return hr;
-
+#else // WIN32
+#endif
     }
 
     struct FileHandle
@@ -140,52 +150,69 @@ namespace addons
 #endif // WIN32
     }
 
-    void openFile(const FunctionCallbackInfo<Value>& args)
+    napi_value openFile(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
+        napi_status status;
 
-        if (!args[0]->IsString())
+        napi_value jsthis;
+        size_t argc = 1;
+        napi_value args[1];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype;
+        status = napi_typeof(env, args[0], &valuetype);
+        assert(status == napi_ok);
+        if (valuetype != napi_string)
         {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "参数错误")));
-            args.GetReturnValue().Set(FALSE);
-            return;
+            napi_throw_error(env, "1", "Parameter error");
+            return jsthis;
         }
-        v8::String::Utf8Value str(args[0]->ToString());
-
-        QString strFilePath = *str;
+        char value[MAX_PATH] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        assert(status == napi_ok);
+        QString strFilePath = value;
         for (int i = 0; i < g_listFiles.count(); i++)
         {
             if (g_listFiles.at(i).strPath == strFilePath)
             {
-                args.GetReturnValue().Set(FALSE);
-                return;
+                return boolenValue(env, false);
             }
         }
         FileHandle files;
 
         if (!files.open(strFilePath.toLatin1().constData()))
         {
-            args.GetReturnValue().Set(FALSE);
-            return;
+            return boolenValue(env, false);
         }
         g_listFiles.append(files);
-        args.GetReturnValue().Set(TRUE);
+        return boolenValue(env, true);
     }
 
-    void closeFile(const FunctionCallbackInfo<Value>& args)
+    napi_value closeFile(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
+        napi_status status;
 
-        if (!args[0]->IsString())
+        napi_value jsthis;
+        size_t argc = 1;
+        napi_value args[1];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype;
+        status = napi_typeof(env, args[0], &valuetype);
+        assert(status == napi_ok);
+        if (valuetype != napi_string)
         {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "参数错误")));
-            return;
+            napi_throw_error(env, "1", "Parameter error");
+            return boolenValue(env, false);
         }
-        v8::String::Utf8Value str(args[0]->ToString());
-
-        QString strFilePath = *str;
+        char value[MAX_PATH] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        assert(status == napi_ok);
+        QString strFilePath = value;
 
         for (int i = 0; i < g_listFiles.count(); i++)
         {
@@ -194,45 +221,68 @@ namespace addons
                 FileHandle file = g_listFiles.at(i);
                 file.close();
                 g_listFiles.removeAt(i);
-                args.GetReturnValue().Set(TRUE);
-                return;
+                return boolenValue(env, true);
             }
         }
-        args.GetReturnValue().Set(FALSE);
-        return;
+        return boolenValue(env, false);
     }
 
-    void findInstall(const FunctionCallbackInfo<Value>& args)
+    napi_value findInstall(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
-        if (!args[0]->IsString())
+        napi_status status;
+
+        napi_value jsthis;
+        size_t argc = 1;
+        napi_value args[1];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype;
+        status = napi_typeof(env, args[0], &valuetype);
+        assert(status == napi_ok);
+        if (valuetype != napi_string)
         {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "参数错误")));
-            return;
+            napi_throw_error(env, "1", "Parameter error");
+            return boolenValue(env, false);
         }
-        v8::String::Utf8Value str(args[0]->ToString());
-        QString strProgrameName = *str;
+        char value[1024] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, 1024, &size);
+        assert(status == napi_ok);
+        QString strProgrameName = value;
         QString strIcon;
         QString strIntallPath = findInstallPath(strProgrameName, strIcon);
-        qDebug() << strIcon;
-        args.GetReturnValue().Set(strIntallPath == "" ? FALSE : TRUE);
-        return;
+        return boolenValue(env, strIntallPath == "" ? false : true);
     }
 
-    void openWithPrograme(const FunctionCallbackInfo<Value>& args)
+    napi_value openWithPrograme(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
-        if (!args[0]->IsString() || !args[1]->IsNumber())
-        {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "参数错误:使用int类型作为第二个参数，0表示默认程序，其他表示以其他方式打开")));
-            return;
-        }
+        napi_status status;
 
-        v8::String::Utf8Value str(args[0]->ToString());
-        QString strOpenFile = *str;
-        int nMode = args[1]->IntegerValue();
+        napi_value jsthis;
+        size_t argc = 2;
+        napi_value args[2];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype[2];
+        status = napi_typeof(env, args[0], &valuetype[0]);
+        assert(status == napi_ok);
+        status = napi_typeof(env, args[1], &valuetype[1]);
+        assert(status == napi_ok);
+        if (valuetype[0] != napi_string && valuetype[0] != napi_number)
+        {
+            napi_throw_error(env, "1", "Parameter error");
+            return boolenValue(env, false);
+        }
+        char value[1024] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, 1024, &size);
+        assert(status == napi_ok);
+
+        QString strOpenFile = value;
+        int nMode;
+        napi_get_value_int32(env, args[1], &nMode);
         wchar_t wcFile[MAX_PATH] = { 0 };
         strOpenFile.toWCharArray(wcFile);
 
@@ -242,13 +292,15 @@ namespace addons
         }
         else
         {
+#ifdef WIN32
             QString argm = "rundll32 shell32,OpenAs_RunDLL ";
             argm = argm + strOpenFile;
 
             QProcess::execute(argm);
+#else
+#endif
         }
-        args.GetReturnValue().Set(TRUE);
-        return;
+        return boolenValue(env, true);
     }
 
     QString getBytesString(DWORD64 dw)
@@ -285,53 +337,88 @@ namespace addons
         }
     }
 
-    void DiskMessage(const FunctionCallbackInfo<Value>& args)
+    napi_value DiskMessage(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
-        if (!args[0]->IsString() || !args[1]->IsFunction())
+        napi_status status;
+
+        napi_value jsthis;
+        size_t argc = 2;
+        napi_value args[2];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype[2];
+        status = napi_typeof(env, args[0], &valuetype[0]);
+        assert(status == napi_ok);
+        status = napi_typeof(env, args[1], &valuetype[1]);
+        assert(status == napi_ok);
+        if (valuetype[0] != napi_string && valuetype[1] != napi_function)
         {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "error")));
-            return;
+            napi_throw_error(env, "1", "Parameter error");
+            return nullptr;
         }
+        char value[MAX_PATH] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        assert(status == napi_ok);
 
-        Local<Function> cb = Local<Function>::Cast(args[1]);
-
-        QString strDisk(*(v8::String::Utf8Value)args[0]->ToString());
+        QString strDisk(value);
+        QString strFreeToCaller, strTotal, strFree;
+#ifdef WIN32
         strDisk = strDisk.left(2);
         DWORD64 qwFreeBytes, qwFreeBytesToCaller, qwTotalBytes;
-        HRESULT bResult = GetDiskFreeSpaceEx(strDisk.toLatin1().constData(),
+        bool bResult = GetDiskFreeSpaceEx(strDisk.toLatin1().constData(),
             (PULARGE_INTEGER)&qwFreeBytesToCaller,
             (PULARGE_INTEGER)&qwTotalBytes,
             (PULARGE_INTEGER)&qwFreeBytes);
-        Local<Value> value[4];
-        QString strFreeToCaller, strTotal, strFree;
         if (bResult)
         {
             strFreeToCaller = getBytesString(qwFreeBytesToCaller);
             strTotal = getBytesString(qwTotalBytes);
             strFree = getBytesString(qwFreeBytes);
         }
+#else
+#endif
+        napi_value global;
+        status = napi_get_global(env, &global);
+        napi_value argv[4] = { 0 };
+        napi_value result;
+        napi_value cb = args[1];
 
-        value[0] = Boolean::New(isolate, bResult);
-        value[1] = String::NewFromUtf8(isolate, strFreeToCaller.toLatin1().constData());
-        value[2] = String::NewFromUtf8(isolate, strTotal.toLatin1().constData());
-        value[3] = String::NewFromUtf8(isolate, strFree.toLatin1().constData());
+        argv[0] = boolenValue(env, bResult);
+        argv[1] = stringValue(env, strFreeToCaller);
+        argv[2] = stringValue(env, strTotal);
+        argv[3] = stringValue(env, strFree);
 
-        cb->Call(isolate->GetCurrentContext()->Global(), 4, value);
+        napi_call_function(env, global, cb, 4, argv, &result);
+        return nullptr;
     }
 
-    void copyFile(const FunctionCallbackInfo<Value>& args)
+    napi_value copyFile(napi_env env, napi_callback_info info)
     {
-        Isolate* isolate = args.GetIsolate();
-        if (!args[0]->IsString())
+        napi_status status;
+
+        napi_value jsthis;
+        size_t argc = 1;
+        napi_value args[1];
+        status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
+        assert(status == napi_ok);
+
+        napi_valuetype valuetype[1];
+        status = napi_typeof(env, args[0], &valuetype[0]);
+        assert(status == napi_ok);
+        status = napi_typeof(env, args[1], &valuetype[1]);
+        assert(status == napi_ok);
+        if (valuetype[0] != napi_string)
         {
-            isolate->ThrowException(Exception::TypeError(
-                String::NewFromUtf8(isolate, "error")));
-            return;
+            napi_throw_error(env, "1", "Parameter error");
+            return nullptr;
         }
-        v8::String::Utf8Value str(args[0]->ToString());
-        QString strFile = *str;
+        char value[MAX_PATH] = { 0 };
+        size_t size;
+        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        assert(status == napi_ok);
+        QString strFile(value);
         QStringList lstFile = strFile.split("*");
 
         if (!QGuiApplication::instance())
@@ -349,16 +436,23 @@ namespace addons
         }
         data->setUrls(lstUrl);
         clip->setMimeData(data);
+        return nullptr;
     }
 
-    void Init(Local<Object> exports)
+    napi_value Init(napi_env env, napi_value exports)
     {
-        NODE_SET_METHOD(exports, "openFile", openFile);
-        NODE_SET_METHOD(exports, "closeFile", closeFile);
-        NODE_SET_METHOD(exports, "findInstall", findInstall);
-        NODE_SET_METHOD(exports, "openWithPrograme", openWithPrograme);
-        NODE_SET_METHOD(exports, "DiskMessage", DiskMessage);
-        NODE_SET_METHOD(exports, "copyFile", copyFile);
+        const int nPorperty = 6;
+        napi_status status;
+        napi_property_descriptor desc[nPorperty];
+        desc[0] = DECLARE_NAPI_METHOD("openFile", openFile);
+        desc[1] = DECLARE_NAPI_METHOD("closeFile", closeFile);
+        desc[2] = DECLARE_NAPI_METHOD("findInstall", findInstall);
+        desc[3] = DECLARE_NAPI_METHOD("openWithPrograme", openWithPrograme);
+        desc[4] = DECLARE_NAPI_METHOD("DiskMessage", DiskMessage);
+        desc[5] = DECLARE_NAPI_METHOD("copyFile", copyFile);
+        status = napi_define_properties(env, exports, nPorperty, desc);
+        assert(status == napi_ok);
+        return exports;
     }
-    NODE_MODULE(NODE_GYP_MODULE_NAME, Init)
+    NAPI_MODULE(NODE_GYP_MODULE_NAME, Init)
 }
