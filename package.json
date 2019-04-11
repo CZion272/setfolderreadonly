@@ -1,6 +1,6 @@
 {
   "name": "setfolderreadonly",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "main": "main.js",
   "dependencies": {
     "bindings": "~1.2.1"
@@ -19,9 +19,13 @@
   "license": "MIT",
   "gypfile": true,
   "binary": {
+    "package_name": "{platform}-{arch}-napi-v{napi_build_version}.tar.gz",
     "module_name": "setfolderreadonly",
-    "module_path": "./lib",
+    "module_path": "./lib/napi-v{napi_build_version}",
     "host": "https://github.com/CZion272/setfolderreadonly/releases/download/",
-    "remote_path": "{version}"
+    "remote_path": "{version}",
+    "napi_versions": [
+      3
+    ]
   }
 }
