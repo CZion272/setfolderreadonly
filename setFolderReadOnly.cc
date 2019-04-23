@@ -404,23 +404,24 @@ namespace addons
         status = napi_get_cb_info(env, info, &argc, args, &jsthis, nullptr);
         assert(status == napi_ok);
 
-        napi_valuetype valuetype[1];
-        status = napi_typeof(env, args[0], &valuetype[0]);
+        napi_valuetype valuetype;
+        status = napi_typeof(env, args[0], &valuetype);
         assert(status == napi_ok);
-        status = napi_typeof(env, args[1], &valuetype[1]);
-        assert(status == napi_ok);
-        if (valuetype[0] != napi_string)
+        if (valuetype != napi_string)
         {
             napi_throw_error(env, "1", "Parameter error");
             return nullptr;
         }
-        char value[MAX_PATH] = { 0 };
         size_t size;
+        status = napi_get_value_string_latin1(env, args[0], NULL, MAX_PATH, &size);
+
+        char *value;
+        value = new char [size];
+
         status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
         QString strFile(value);
         QStringList lstFile = strFile.split("*");
-
         if (!QGuiApplication::instance())
         {
             int argc = 0;
