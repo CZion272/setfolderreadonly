@@ -4,7 +4,7 @@ lib
 test.js
 *.yml
 bin
-build
+build*
 node_modules
 *.dll
 *.lib

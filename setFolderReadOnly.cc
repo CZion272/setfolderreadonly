@@ -170,7 +170,7 @@ namespace addons
         }
         char value[MAX_PATH] = { 0 };
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
         QString strFilePath = value;
         for (int i = 0; i < g_listFiles.count(); i++)
@@ -210,7 +210,7 @@ namespace addons
         }
         char value[MAX_PATH] = { 0 };
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
         QString strFilePath = value;
 
@@ -247,7 +247,7 @@ namespace addons
         }
         char value[1024] = { 0 };
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], value, 1024, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, 1024, &size);
         assert(status == napi_ok);
         QString strProgrameName = value;
         QString strIcon;
@@ -275,9 +275,9 @@ namespace addons
             napi_throw_error(env, "1", "Parameter error");
             return boolenValue(env, false);
         }
-        char value[1024] = { 0 };
+        char value[MAX_PATH] = { 0 };
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], value, 1024, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
 
         QString strOpenFile = value;
@@ -295,10 +295,9 @@ namespace addons
 #ifdef WIN32
             QString argm = "rundll32 shell32,OpenAs_RunDLL ";
             argm = argm + strOpenFile;
-
-            QProcess::execute(argm);
 #else
 #endif
+            QProcess::execute(argm);
         }
         return boolenValue(env, true);
     }
@@ -359,7 +358,7 @@ namespace addons
         }
         char value[MAX_PATH] = { 0 };
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
 
         QString strDisk(value);
@@ -413,12 +412,12 @@ namespace addons
             return nullptr;
         }
         size_t size;
-        status = napi_get_value_string_latin1(env, args[0], NULL, MAX_PATH, &size);
+        status = napi_get_value_string_utf8(env, args[0], NULL, MAX_PATH, &size);
 
         char *value;
         value = new char [size];
 
-        status = napi_get_value_string_latin1(env, args[0], value, MAX_PATH, &size);
+        status = napi_get_value_string_utf8(env, args[0], value, MAX_PATH, &size);
         assert(status == napi_ok);
         QString strFile(value);
         QStringList lstFile = strFile.split("*");
